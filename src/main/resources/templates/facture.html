@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>TicTak - Facture</title>
+    <link rel="stylesheet" href="/css/devis.css"/>
+</head>
+<body>
+<div class="invoice-container">
+    <!-- Header -->
+    <div class="header">
+        <div class="logo-section">
+            <div>
+                <div class="logo">
+
+                    <div>
+                        <div>TicTak</div>
+                        <div class="tagline">Transport Efficace</div>
+                    </div>
+                </div>
+            </div>
+            <div class="devis-title">Facture</div>
+        </div>
+        <div class="reference-box">
+            Réf : <span th:text="${moveRequest.moveId}">0001593</span>
+            Date <span th:text="${#temporals.format(moveRequest.plannedDateTime, 'dd/MM/yyyy')}">24/03/2025</span>
+        </div>
+    </div>
+    <!-- Client Information -->
+    <div class="client-info">
+        <div class="client-details">
+            <div class="client-left">
+                <h3>Nom : <span th:text="${moveRequest.client != null ? moveRequest.client.firstName + ' ' + moveRequest.client.lastName : 'N/A'}">Client Name</span></h3>
+                <p>Adresse de départ : <span th:text="${moveRequest.sourceAddress}">Source Address</span></p>
+                <p>Adresse d'arrivée : <span th:text="${moveRequest.destinationAddress}">Destination Address</span></p>
+            </div>
+            <div class="client-right">
+                <p><strong>Tél. : <span th:text="${moveRequest.client != null ? moveRequest.client.phoneNumber : 'N/A'}">+33 6 22 55 54 54</span></strong></p>
+                <p><strong>Email : <span th:text="${moveRequest.clientEmail}">client@example.com</span></strong></p>
+            </div>
+        </div>
+    </div>
+    <!-- Items Table -->
+    <div class="items-table">
+        <div class="table-header">
+            <div>Qté.</div>
+            <div>Description</div>
+        </div>
+        <div th:each="item : ${moveRequest.items}" class="table-row">
+            <div class="qty" th:text="${item.quantity}">1</div>
+            <div class="description" th:text="${item.itemLabel}">Item Description</div>
+        </div>
+    </div>
+    <div class="footer-section">
+        <div class="conditions">
+            <h4>Conditions générales :</h4>
+            <p>Le client s'engage à être présent aux adresses et horaires convenus. Toute modification doit être signalée au moins 48 heures à l'avance.</p>
+            <div class="signature-section">
+                <div class="company-seal">
+                    TicTak
+                </div>
+                <div class="director-title">Directeur</div>
+            </div>
+        </div>
+        <div class="pricing">
+            <div class="price-row">
+                <span class="price-label">Prix HT :</span>
+                <span class="price-value" th:text="${moveRequest.preCommissionCost != null ? #numbers.formatDecimal(moveRequest.postCommissionCost, 0.8, 2) + ' €' : 'N/A'}">1 615,00 €</span>
+            </div>
+            <div class="price-row">
+                <span class="price-label">TVA (20%) :</span>
+                <span class="price-value" th:text="${moveRequest.preCommissionCost != null ? #numbers.formatDecimal(moveRequest.preCommissionCost * 0.2, 1, 2) + ' €' : 'N/A'}">323,00 €</span>
+            </div>
+            <div class="price-row total">
+                <span class="price-label">Prix TTC :</span>
+                <span class="price-value" th:text="${moveRequest.preCommissionCost != null ? #numbers.formatDecimal(moveRequest.preCommissionCost * 1, 1, 2) + ' €' : 'N/A'}">1 938,00 €</span>
+            </div>
+        </div>
+    </div>
+    <!-- Bottom Footer -->
+    <div class="bottom-footer">
+        <div class="contact-info">
+            <p><strong>Adresse : Paris France</strong></p>
+            <p><strong>+33 6 50 10 21 72</strong></p>
+            <p><strong>www.TicTak.fr</strong></p>
+        </div>
+    </div>
+</div>
+<script src="/js/devis.js"></script>
+</body>
+</html>

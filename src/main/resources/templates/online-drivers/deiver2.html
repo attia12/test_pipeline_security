@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver WebSocket Test with Countdown</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.2/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        .notification {
+            background-color: #e7f3fe;
+            border-left: 6px solid #2196F3;
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .notification h3 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+        .notification p {
+            margin: 5px 0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+    </style>
+    <script>
+        const driverId = "62ff782fa445871113f59fcf"; // Driver 1 ID
+        const token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2hhbWVkQGdtYWlsLmNvbSIsInJvbGVzIjpbIlJPTEVfRFJJVkVSIl0sInVzZXJJZCI6IjYyZmY3ODJmYTQ0NTg3MTExM2Y1OWZjZiIsImlhdCI6MTc0NzIzMzg1MiwiZXhwIjoxNzQ3MjY5ODUyfQ.ZpYLvmFiGjmkpEeTTu3wTY-oOd7egO3FED-3q43tXro";
+
+        const socket = new SockJS('http://localhost:8090/ws');
+        const stompClient = Stomp.over(socket);
+
+        stompClient.connect({ 'Authorization': 'Bearer ' + token }, function(frame) {
+            console.log('Connected: ' + frame);
+            stompClient.subscribe('/topic/driver/status', function(message) {
+                console.log("Received status message: " + message.body);
+            });
+            stompClient.subscribe('/topic/driver/' + driverId, function(message) {
+                console.log("Received mission notification: ", message.body);
+                try {
+                    const mission = JSON.parse(message.body);
+                    console.log("Parsed mission: ", mission);
+                    const now = new Date().toLocaleString();
+                    const notificationList = document.getElementById('notification-list');
+                    let notificationDiv = document.getElementById(`notification-${mission.moveId}`);
+
+                    if (!notificationDiv) {
+                        // Create new notification if it doesn't exist
+                        notificationDiv = document.createElement('div');
+                        notificationDiv.className = 'notification';
+                        notificationDiv.id = `notification-${mission.moveId}`;
+                        notificationDiv.innerHTML = `
+                            <h3>Mission Status: <span id="status-${mission.moveId}">${mission.status}</span></h3>
+                            <p><strong>Received at:</strong> ${now}</p>
+                            <p><strong>Move ID:</strong> ${mission.moveId}</p>
+                            <p><strong>To:</strong> ${mission.destinationAddress}</p>
+                            <p><strong>Cost:</strong> ${mission.postCommissionCost}€</p>
+                            <p><strong>Duration:</strong> ${mission.durationInMinutes} minutes</p>
+                            <p><strong>Number of Products:</strong> ${mission.numberOfProducts}</p>
+                            <p><strong>Distance:</strong> ${mission.distanceInKm} km</p>
+                            <p><strong>Expires in:</strong> <span id="countdown-${mission.moveId}">${mission.remainingSeconds}</span> seconds</p>
+                        `;
+                        notificationList.appendChild(notificationDiv);
+                    } else {
+                        // Update existing notification
+                        const statusElement = document.getElementById(`status-${mission.moveId}`);
+                        const countdownElement = document.getElementById(`countdown-${mission.moveId}`);
+                        if (statusElement) {
+                            statusElement.textContent = mission.status;
+                        }
+                        if (countdownElement) {
+                            countdownElement.textContent = mission.remainingSeconds;
+                        }
+                    }
+
+                    // Handle countdown
+                    if (mission.remainingSeconds > 0) {
+                        let countdown = parseInt(mission.remainingSeconds, 10);
+                        const countdownElement = document.getElementById(`countdown-${mission.moveId}`);
+                        if (countdownElement) {
+                            const interval = setInterval(() => {
+                                countdown--;
+                                if (countdown >= 0) {
+                                    countdownElement.textContent = countdown;
+                                } else {
+                                    clearInterval(interval);
+                                    countdownElement.textContent = "Expired";
+                                }
+                            }, 1000);
+                        }
+                    } else {
+                        const countdownElement = document.getElementById(`countdown-${mission.moveId}`);
+                        if (countdownElement) {
+                            countdownElement.textContent = "Expired";
+                        }
+                    }
+                } catch (error) {
+                    console.error("Failed to parse mission notification: ", error);
+                }
+            });
+        }, function(error) {
+            console.error("STOMP error: " + error);
+            setTimeout(function() {
+                stompClient.connect({ 'Authorization': 'Bearer ' + token }, function(frame) {
+                    console.log('Reconnected: ' + frame);
+                });
+            }, 5000);
+        });
+
+        setInterval(function() {
+            if (stompClient.connected) {
+                const locationUpdate = {
+                    type: "location",
+                    driverId: driverId,
+                    latitude: 48.868335029786856 + Math.random() * 0.000001,
+                    longitude: 2.3655909803206265 + Math.random() * 0.000001
+                };
+                stompClient.send("/app/driver/location", {}, JSON.stringify(locationUpdate));
+                console.log("Sent location update: " + JSON.stringify(locationUpdate));
+            } else {
+                console.log("STOMP client not connected, skipping location update");
+            }
+        }, 10000);
+    </script>
+</head>
+<body>
+<h1>Driver WebSocket Test with Countdown</h1>
+<p>Open the console (F12) to see logs and verify the driver's online status.</p>
+<div id="notifications">
+    <h2>Notifications</h2>
+    <div id="notification-list"></div>
+</div>
+</body>
+</html>
