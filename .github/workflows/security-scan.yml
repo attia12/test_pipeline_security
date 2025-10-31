@@ -1,4 +1,4 @@
-name: OWASP Dependency Check Scan
+name: Spring Boot CI/CD Pipeline
 
 on:
   push:
@@ -9,13 +9,10 @@ on:
       - main
 
 jobs:
-  security-scan:
+  build-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Clean Dependency Check Cache
-        run: rm -rf ~/.dependency-check
-
-      - name: Checkout code
+      - name: Checkout source code
         uses: actions/checkout@v3
 
       - name: Set up JDK 17
@@ -24,13 +21,31 @@ jobs:
           distribution: 'corretto'
           java-version: 17
 
-      - name: Run OWASP Dependency Check
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: mvn org.owasp:dependency-check-maven:check -Dnvd.api.key=${NVD_API_KEY}
+      - name: Build and run tests
+        run: mvn -B clean install
 
-      - name: Upload OWASP Report
-        uses: actions/upload-artifact@v4
+  code-review:
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run static code analysis
+        run: mvn checkstyle:checkstyle
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
         with:
-          name: dependency-check-report
-          path: target/dependency-check-report.html
+          distribution: 'corretto'
+          java-version: 17
+
+      - name: Run Snyk Vulnerability Scan
+        uses: snyk/actions/maven@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
