@@ -12,6 +12,9 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     steps:
+      - name: Clean Dependency Check Cache
+        run: rm -rf ~/.dependency-check
+
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -24,4 +27,10 @@ jobs:
       - name: Run OWASP Dependency Check
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: mvn org.owasp:dependency-check-maven:check
+        run: mvn org.owasp:dependency-check-maven:check -Dnvd.api.key=${NVD_API_KEY}
+
+      - name: Upload OWASP Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-check-report
+          path: target/dependency-check-report.html
